@@ -272,9 +272,10 @@ WIN_WarpMouse(SDL_Window * window, int x, int y)
     POINT pt;
 
     /* Don't warp the mouse while we're doing a modal interaction */
-    if (data->in_title_click || data->focus_click_pending) {
-        return;
-    }
+    // Urho3D: disable check as warping should already be used responsibly and a possible bug #1258 results from this from SDL 2.0.4 onward
+    //if (data->in_title_click || data->focus_click_pending) {
+    //    return;
+    //}
 
     pt.x = x;
     pt.y = y;

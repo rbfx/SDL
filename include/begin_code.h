@@ -49,7 +49,22 @@
 #  endif
 #endif
 
+// rbfx: Custom export logic to facilitate exporting lib API from main engine dll.
+#if _WIN32
+#   if defined(SDL_EXPORTS)
+#       define DECLSPEC __declspec(dllexport)
+#   elif defined(SDL_IMPORTS)
+#       define DECLSPEC __declspec(dllimport)
+#	else
+#		define DECLSPEC
+#   endif
+#elif SDL_EXPORTS || SDL_IMPORTS
+#   define DECLSPEC __attribute__((visibility("default")))
+#else
+#   define DECLSPEC
+#endif
 /* Some compilers use a special export keyword */
+/*
 #ifndef DECLSPEC
 # if defined(__WIN32__) || defined(__WINRT__) || defined(__CYGWIN__) || defined(__GDK__)
 #  ifdef DLL_EXPORT
@@ -71,6 +86,7 @@
 #  endif
 # endif
 #endif
+*/
 
 /* By default SDL uses the C calling convention */
 #ifndef SDLCALL

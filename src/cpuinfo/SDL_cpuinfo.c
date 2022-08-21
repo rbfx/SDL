@@ -1097,6 +1097,15 @@ SDL_GetSystemRAM(void)
 }
 
 
+// Urho3D - bug fix - check if SIMD is supported
+#ifdef __EMSCRIPTEN__
+size_t
+SDL_SIMDGetAlignment(void)
+{
+    SDL_assert(0 && "We should never get here if the platform does not support SIMD");
+    return 4;
+}
+#else
 size_t
 SDL_SIMDGetAlignment(void)
 {
@@ -1196,6 +1205,7 @@ SDL_SIMDFree(void *ptr)
         SDL_free(*(((void **) ptr) - 1));
     }
 }
+#endif
 
 
 #ifdef TEST_MAIN

@@ -515,6 +515,20 @@ set_option(SDL_INSTALL_TESTS   "Install test-cases" OFF)
 
 set(HAVE_STATIC_PIC "${SDL_STATIC_PIC}")
 
+# rbfx: Custom configs. Its easier to do it here than dance around SDL's mess of a build system. Need to do it at least SDL_SHARED somewhere here anyway..
+set(SDL_CMAKE_DEBUG_POSTFIX "")
+set(SDL_RENDER OFF)
+set(SDL2_DISABLE_INSTALL ON)
+set(SDL2_DISABLE_UNINSTALL ON)
+set(SDL2_DISABLE_SDL2MAIN ON)
+set(SDL_TEST OFF)
+set(SDL_TESTS OFF)
+set(SDL_SHARED OFF)
+set(SDL_STATIC ON)
+set(SDL_STATIC_PIC ON)
+set(SDL_VULKAN OFF)
+set(SDL_METAL OFF)
+
 if(SDL_HIDAPI)
   if(HIDAPI_ONLY_LIBUSB)
     set(SDL_HIDAPI_LIBUSB ON CACHE BOOL "" FORCE)
@@ -3136,8 +3150,9 @@ if(SDL_STATIC)
   target_include_directories(SDL2-static PUBLIC
       "$<BUILD_INTERFACE:${SDL2_BINARY_DIR}/include>"
       "$<BUILD_INTERFACE:${SDL2_BINARY_DIR}/include-config-$<LOWER_CASE:$<CONFIG>>>"
-      "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
-      "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/SDL2>")
+      #"$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+      #"$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/SDL2>"
+  )
   # This picks up all the compiler options and such we've accumulated up to here.
   target_link_libraries(SDL2-static PRIVATE $<BUILD_INTERFACE:sdl-build-options>)
   if(NOT ANDROID)
@@ -3340,3 +3355,58 @@ set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} ${CMAKE_C_FLAGS}")
 if(TARGET SDL2::SDL2-static AND NOT TARGET SDL2::SDL2)
   add_library(SDL2::SDL2 ALIAS SDL2-static)
 endif()
+
+########################################################################################################################
+
+# General includes
+# Urho3D - use 'generated' path suffix for generated config header file, the suffic prevents overwriting the header file with the same name in the source tree in case of non out-of-source build tree is being used
+target_include_directories (SDL2-static SYSTEM
+  PUBLIC $<BUILD_INTERFACE:${SDL2_BINARY_DIR}/include-config-$<LOWER_CASE:$<CONFIG>>>
+         $<BUILD_INTERFACE:${SDL2_BINARY_DIR}/include/SDL/generated>
+         $<BUILD_INTERFACE:${SDL2_SOURCE_DIR}/include>
+         $<INSTALL_INTERFACE:${DEST_THIRDPARTY_HEADERS_DIR}/SDL>
+)
+if (WEB)
+    target_compile_options(SDL2-static PUBLIC -sUSE_SDL=0)
+endif ()
+if (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND (NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "10.0")) OR
+("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND (NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "11.0")))
+  # Fix multiple definition of `WAYLAND_*' with GCC 10, because -fno-common is a new default.
+  target_compile_options(SDL2-static PRIVATE -fcommon)
+endif ()
+if (BUILD_SHARED_LIBS)
+  target_compile_definitions(SDL2-static PRIVATE -DSDL_EXPORTS PUBLIC -DSDL_IMPORTS)
+endif ()
+if (WIN32)
+  target_link_libraries (SDL2-static PUBLIC user32 gdi32 imm32 version winmm setupapi)
+elseif (ANDROID)
+  target_link_libraries (SDL2-static PUBLIC dl log android)
+elseif (APPLE)
+  target_link_libraries (SDL2-static PUBLIC iconv "-framework AudioToolbox" "-framework CoreAudio")
+  if (IOS)
+    target_link_libraries (SDL2-static PUBLIC "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreBluetooth" "-framework CoreMotion" "-framework Foundation" "-framework GameController" "-framework OpenGLES" "-framework QuartzCore" "-framework UIKit")
+  else ()
+    target_link_libraries (SDL2-static PUBLIC "-framework Carbon" "-framework Cocoa" "-framework CoreFoundation" "-framework SystemConfiguration" "-framework CoreServices" "-framework CoreVideo" "-framework ForceFeedback" "-framework IOKit" "-framework OpenGL")
+  endif ()
+elseif (EMSCRIPTEN)
+  target_link_libraries(SDL2-static PUBLIC "-s DISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=0")
+endif ()
+
+if (IOS OR UWP OR ANDROID)
+    target_sources(SDL2-static PRIVATE ${SDLMAIN_SOURCES})
+endif ()
+
+if (NOT MINI_URHO)
+  # Install headers for building and using the Urho3D library (install dependency for InputEvents.h)
+  install (DIRECTORY include/ DESTINATION ${DEST_THIRDPARTY_HEADERS_DIR}/SDL/ FILES_MATCHING PATTERN *.h)    # Note: the trailing slash is significant
+  install (FILES
+    "${SDL2_BINARY_DIR}/include/SDL_revision.h"
+    #"${SDL2_BINARY_DIR}/include-config-$<LOWER_CASE:$<CONFIG>>/SDL_config.h"
+    DESTINATION ${DEST_THIRDPARTY_HEADERS_DIR}/SDL)
+
+  if (NOT URHO3D_MERGE_STATIC_LIBS)
+    install(TARGETS SDL2-static EXPORT Urho3D ARCHIVE DESTINATION ${DEST_ARCHIVE_DIR_CONFIG})
+  endif ()
+endif ()
+
+group_sources()

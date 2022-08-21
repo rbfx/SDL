@@ -1034,6 +1034,9 @@ IME_HandleMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM *lParam, SDL_VideoD
             IME_GetCompositionString(videodata, himc, GCS_RESULTSTR);
             SDL_SendEditingText("", 0, 0);
             IME_SendInputEvent(videodata);
+            // Urho3D: When text inputed, it is need to clear the text in composition
+            ImmAssociateContext(videodata->ime_hwnd_main, (HIMC)0);
+            ImmAssociateContext(videodata->ime_hwnd_main, videodata->ime_himc);
         }
         if (*lParam & GCS_COMPSTR) {
             if (!videodata->ime_uiless)

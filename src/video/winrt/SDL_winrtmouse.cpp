@@ -189,6 +189,14 @@ WINRT_SetRelativeMouseMode(SDL_bool enabled)
     return 0;
 }
 
+// rbfx: WINRT_WarpMouse impl
+void
+WINRT_WarpMouse(SDL_Window* window, int x, int y)
+{
+    CoreWindow^ coreWindow = CoreWindow::GetForCurrentThread();
+    coreWindow->PointerPosition = Windows::Foundation::Point(x, y);
+}
+
 void
 WINRT_InitMouse(_THIS)
 {
@@ -205,7 +213,7 @@ WINRT_InitMouse(_THIS)
     mouse->CreateSystemCursor = WINRT_CreateSystemCursor;
     mouse->ShowCursor = WINRT_ShowCursor;
     mouse->FreeCursor = WINRT_FreeCursor;
-    //mouse->WarpMouse = WINRT_WarpMouse;
+    mouse->WarpMouse = WINRT_WarpMouse;    // rbfx: Oh yes it does!
     mouse->SetRelativeMouseMode = WINRT_SetRelativeMouseMode;
 
     SDL_SetDefaultCursor(WINRT_CreateDefaultCursor());

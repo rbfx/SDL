@@ -289,7 +289,8 @@ X11_InitKeyboard(_THIS)
            Compose keys will work correctly. */
         char *prev_locale = setlocale(LC_ALL, NULL);
         char *prev_xmods  = X11_XSetLocaleModifiers(NULL);
-        const char *new_xmods = "";
+        // Urho3D - bug fix - the default XMODIFIERS should be null instead of empty string
+        const char *new_xmods = 0;
         const char *env_xmods = SDL_getenv("XMODIFIERS");
         SDL_bool has_dbus_ime_support = SDL_FALSE;
 

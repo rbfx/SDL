@@ -524,9 +524,13 @@
 /* Enable ime support */
 #cmakedefine SDL_USE_IME @SDL_USE_IME@
 
+/* Enable dynamic udev support */
+#cmakedefine SDL_UDEV_DYNAMIC @SDL_UDEV_DYNAMIC@
+
 /* Platform specific definitions */
 #cmakedefine SDL_IPHONE_KEYBOARD @SDL_IPHONE_KEYBOARD@
 #cmakedefine SDL_IPHONE_LAUNCHSCREEN @SDL_IPHONE_LAUNCHSCREEN@
+#cmakedefine SDL_IPHONE_MAX_GFORCE @SDL_IPHONE_MAX_GFORCE@
 
 #cmakedefine SDL_VIDEO_VITA_PIB @SDL_VIDEO_VITA_PIB@
 #cmakedefine SDL_VIDEO_VITA_PVR @SDL_VIDEO_VITA_PVR@

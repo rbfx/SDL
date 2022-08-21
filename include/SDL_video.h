@@ -796,9 +796,10 @@ extern DECLSPEC SDL_Window * SDLCALL SDL_CreateWindow(const char *title,
  * \since This function is available since SDL 2.0.0.
  *
  * \sa SDL_CreateWindow
- * \sa SDL_DestroyWindow
+ * \sa SDL_DestroyWindowSDL_LoadDollarTemplates
  */
-extern DECLSPEC SDL_Window * SDLCALL SDL_CreateWindowFrom(const void *data);
+// Urho3D: added window flags parameter
+extern DECLSPEC SDL_Window * SDLCALL SDL_CreateWindowFrom(const void *data, Uint32 flags);
 
 /**
  * Get the numeric ID of a window.

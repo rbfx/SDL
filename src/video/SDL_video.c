@@ -1773,11 +1773,12 @@ SDL_CreateWindow(const char *title, int x, int y, int w, int h, Uint32 flags)
     return window;
 }
 
+// Urho3D: added flags parameter
 SDL_Window *
-SDL_CreateWindowFrom(const void *data)
+SDL_CreateWindowFrom(const void *data, Uint32 flags)
 {
     SDL_Window *window;
-    Uint32 flags = SDL_WINDOW_FOREIGN;
+    flags |= SDL_WINDOW_FOREIGN;
 
     if (!_this) {
         SDL_UninitializedVideo();
@@ -1835,6 +1836,17 @@ SDL_CreateWindowFrom(const void *data)
         _this->windows->prev = window;
     }
     _this->windows = window;
+
+    // Urho3D: load OpenGL if initializing an external OpenGL window
+    if (flags & SDL_WINDOW_OPENGL) {
+        if (!_this->GL_CreateContext) {
+            SDL_SetError("No OpenGL support in video driver");
+            SDL_DestroyWindow(window);
+            return NULL;
+        }
+        SDL_GL_LoadLibrary(NULL);
+        window->flags |= SDL_WINDOW_OPENGL;
+    }
 
     if (_this->CreateSDLWindowFrom(_this, window, data) < 0) {
         SDL_DestroyWindow(window);

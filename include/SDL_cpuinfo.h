@@ -82,7 +82,7 @@ _m_prefetch(void *__P)
 #  elif defined(__WINDOWS__) || defined(__WINRT__) || defined(__GDK__)
 /* Visual Studio doesn't define __ARM_ARCH, but _M_ARM (if set, always 7), and _M_ARM64 (if set, always 1). */
 #    if defined(_M_ARM)
-#      include <armintr.h>
+//#      include <armintr.h>    // rbfx fix for UWP ARM64
 #      include <arm_neon.h>
 #      define __ARM_NEON 1 /* Set __ARM_NEON so that it can be used elsewhere, at compile time */
 #    endif
@@ -495,6 +495,11 @@ extern DECLSPEC int SDLCALL SDL_GetSystemRAM(void);
  */
 extern DECLSPEC size_t SDLCALL SDL_SIMDGetAlignment(void);
 
+// Urho3D - bug fix - check if SIMD is supported
+#ifdef __EMSCRIPTEN__
+#define SDL_SIMDAlloc SDL_malloc
+#define SDL_SIMDFree SDL_free
+#else
 /**
  * Allocate memory in a SIMD-friendly way.
  *
@@ -581,6 +586,7 @@ extern DECLSPEC void * SDLCALL SDL_SIMDRealloc(void *mem, const size_t len);
  * \sa SDL_SIMDRealloc
  */
 extern DECLSPEC void SDLCALL SDL_SIMDFree(void *ptr);
+#endif  // __EMSCRIPTEN__
 
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus

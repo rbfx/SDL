@@ -369,6 +369,9 @@ static void Internal_Android_Destroy_AssetManager(void);
 static AAssetManager *asset_manager = NULL;
 static jobject javaAssetManagerRef = 0;
 
+// Urho3D: application files dir
+static char* mFilesDir = 0;
+
 /*******************************************************************************
                  Functions called by JNI
 *******************************************************************************/
@@ -534,6 +537,12 @@ void checkJNIReady(void)
     }
 
     SDL_SetMainReady();
+}
+
+// Urho3D: added function
+const char* SDL_Android_GetFilesDir()
+{
+    return mFilesDir;
 }
 
 /* Activity initialization -- called before SDL_main() to initialize JNI bindings */
@@ -748,13 +757,10 @@ JNIEXPORT int JNICALL SDL_JAVA_INTERFACE(nativeRunMain)(JNIEnv *env, jclass cls,
             SDL_bool isstack;
 
             /* Prepare the arguments. */
+            // Urho3D: Remove any assumption on the arguments, except that the first argument will be the program name set by SDLActivity or its subclass
             len = (*env)->GetArrayLength(env, array);
-            argv = SDL_small_alloc(char *, 1 + len + 1, &isstack);  /* !!! FIXME: check for NULL */
+            argv = SDL_small_alloc(char *, len + 1, &isstack);  /* !!! FIXME: check for NULL */
             argc = 0;
-            /* Use the name "app_process" so PHYSFS_platformCalcBaseDir() works.
-               https://bitbucket.org/MartinFelis/love-android-sdl2/issue/23/release-build-crash-on-start
-             */
-            argv[argc++] = SDL_strdup("app_process");
             for (i = 0; i < len; ++i) {
                 const char *utf;
                 char *arg = NULL;
@@ -774,6 +780,27 @@ JNIEXPORT int JNICALL SDL_JAVA_INTERFACE(nativeRunMain)(JNIEnv *env, jclass cls,
             }
             argv[argc] = NULL;
 
+            // Urho3D: Set the files dir
+            jobject context = (*env)->CallStaticObjectMethod(env, mActivityClass, midGetContext);
+            jmethodID mid = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context),
+                "getFilesDir", "()Ljava/io/File;");
+            jobject dir = (*env)->CallObjectMethod(env, context, mid);
+            mid = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, dir),
+                "getAbsolutePath", "()Ljava/lang/String;");
+            jstring filesDir = (jstring)(*env)->CallObjectMethod(env, dir, mid);
+
+            const char *str;
+            str = (*env)->GetStringUTFChars(env, filesDir, 0);
+            if (str)
+            {
+                if (mFilesDir)
+                    free(mFilesDir);
+
+                size_t length = strlen(str) + 1;
+                mFilesDir = (char*)malloc(length);
+                memcpy(mFilesDir, str, length);
+                (*env)->ReleaseStringUTFChars(env, filesDir, str);
+            }
 
             /* Run the application. */
             status = SDL_main(argc, argv);
@@ -1169,6 +1196,14 @@ JNIEXPORT void JNICALL SDL_JAVA_INTERFACE(onNativeLocaleChanged)(
 JNIEXPORT void JNICALL SDL_JAVA_INTERFACE(nativeSendQuit)(
                                     JNIEnv *env, jclass cls)
 {
+    // Urho3D: added log print
+    __android_log_print(ANDROID_LOG_VERBOSE, "SDL", "nativeQuit()");
+    // Urho3D: Free the memory that we allocate during init
+    if (mFilesDir) {
+        free(mFilesDir);
+        mFilesDir = 0;
+    }
+
     /* Discard previous events. The user should have handled state storage
      * in SDL_APP_WILLENTERBACKGROUND. After nativeSendQuit() is called, no
      * events other than SDL_QUIT and SDL_APP_TERMINATING should fire */
@@ -2255,6 +2290,67 @@ int Android_JNI_ShowMessageBox(const SDL_MessageBoxData *messageboxdata, int *bu
 // Functions exposed to SDL applications in SDL_system.h
 //////////////////////////////////////////////////////////////////////////////
 */
+
+// Urho3D - function to return a list of files under a given path in "assets" directory (caller is responsible to free the C string array)
+char** SDL_Android_GetFileList(const char* path, int* count)
+{
+    struct LocalReferenceHolder refs = LocalReferenceHolder_Setup(__FUNCTION__);
+    JNIEnv* env = Android_JNI_GetEnv();
+    if (!LocalReferenceHolder_Init(&refs, env))
+    {
+        LocalReferenceHolder_Cleanup(&refs);
+        return NULL;
+    }
+
+    jstring pathJString = (*env)->NewStringUTF(env, path);
+
+    /* context = SDLActivity.getContext(); */
+    jobject context = (*env)->CallStaticObjectMethod(env, mActivityClass, midGetContext);
+
+    /* assetManager = context.getAssets(); */
+    jmethodID mid = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context),
+            "getAssets", "()Landroid/content/res/AssetManager;");
+    jobject assetManager = (*env)->CallObjectMethod(env, context, mid);
+
+    /* stringArray = assetManager.list(path) */
+    mid = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, assetManager), "list", "(Ljava/lang/String;)[Ljava/lang/String;");
+    jobjectArray stringArray = (*env)->CallObjectMethod(env, assetManager, mid, pathJString);
+    if (Android_JNI_ExceptionOccurred(SDL_TRUE))
+    {
+        LocalReferenceHolder_Cleanup(&refs);
+        return NULL;
+    }
+
+    jsize arrayLength = (*env)->GetArrayLength(env, stringArray);
+    char** cStringArray = (char**)SDL_malloc(arrayLength * sizeof(char*));
+    jint i;
+    for (i = 0; i < arrayLength; ++i)
+    {
+        jstring string = (jstring)(*env)->GetObjectArrayElement(env, stringArray, i);
+        const char* cString = (*env)->GetStringUTFChars(env, string, 0);
+        cStringArray[i] = cString ? SDL_strdup(cString) : NULL;
+        (*env)->ReleaseStringUTFChars(env, string, cString);
+    }
+
+    *count = arrayLength;
+
+    LocalReferenceHolder_Cleanup(&refs);
+    return cStringArray;
+}
+
+// Urho3D - helper function to free the file list returned by SDL_Android_GetFileList()
+void SDL_Android_FreeFileList(char*** array, int* count)
+{
+    int i = *count;
+    if ((i > 0) && (*array != NULL))
+    {
+        while (i--)
+            SDL_free((*array)[i]);
+    }
+    SDL_free(*array);
+    *array = NULL;
+    *count = 0;
+}
 
 void *SDL_AndroidGetJNIEnv(void)
 {

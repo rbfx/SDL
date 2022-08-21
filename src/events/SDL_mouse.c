@@ -929,6 +929,10 @@ SDL_PerformWarpMouseInWindow(SDL_Window *window, int x, int y, SDL_bool ignore_r
     } else {
         SDL_PrivateSendMouseMotion(window, mouse->mouseID, 0, x, y);
     }
+
+    // Urho3D: update mouse internal state immediately
+    mouse->last_x = mouse->x = x;
+    mouse->last_y = mouse->y = y;
 }
 
 void

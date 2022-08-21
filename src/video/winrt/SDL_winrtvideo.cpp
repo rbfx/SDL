@@ -32,7 +32,7 @@
 #include <functional>
 #include <string>
 #include <sstream>
-using namespace std;
+//using namespace std;  // rbfx fix
 
 /* Windows includes */
 #include <agile.h>
@@ -262,8 +262,20 @@ WINRT_VideoInit(_THIS)
     return 0;
 }
 
-extern "C"
-Uint32 D3D11_DXGIFormatToSDLPixelFormat(DXGI_FORMAT dxgiFormat);
+// rbfx: Copy D3D11_DXGIFormatToSDLPixelFormat() from SDL_render_d3d11.c, because we build without renderer.
+//extern "C"
+//Uint32 D3D11_DXGIFormatToSDLPixelFormat(DXGI_FORMAT dxgiFormat);
+static Uint32 D3D11_DXGIFormatToSDLPixelFormat(DXGI_FORMAT dxgiFormat)
+{
+    switch (dxgiFormat) {
+    case DXGI_FORMAT_B8G8R8A8_UNORM:
+        return SDL_PIXELFORMAT_ARGB8888;
+    case DXGI_FORMAT_B8G8R8X8_UNORM:
+        return SDL_PIXELFORMAT_RGB888;
+    default:
+        return SDL_PIXELFORMAT_UNKNOWN;
+    }
+}
 
 static void
 WINRT_DXGIModeToSDLDisplayMode(const DXGI_MODE_DESC * dxgiMode, SDL_DisplayMode * sdlMode)

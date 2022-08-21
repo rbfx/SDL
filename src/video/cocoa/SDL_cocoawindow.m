@@ -1479,7 +1479,9 @@ Cocoa_SendMouseButtonClicks(SDL_Mouse * mouse, NSEvent *theEvent, SDL_Window * w
         /* Make the origin the upper left instead of the lower left */
         y = 1.0f - y;
 
-        switch (phase) {
+        // Urho3D: disable touch events from the touchpad, as touch in Urho3D is understood
+        // to originate from absolute positioning devices like touch screens
+        /*switch (phase) {
         case NSTouchPhaseBegan:
             SDL_SendTouch(touchId, fingerId, window, SDL_TRUE, x, y, 1.0f);
             break;
@@ -1492,7 +1494,7 @@ Cocoa_SendMouseButtonClicks(SDL_Mouse * mouse, NSEvent *theEvent, SDL_Window * w
             break;
         default:
             break;
-        }
+        }*/
     }
 }
 
